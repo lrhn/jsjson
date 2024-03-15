@@ -49,7 +49,6 @@ JsonAny? parseUtf8Json(Uint8List jsonBytes) {
   throw UnimplementedError();
 }
 
-
 class _JsonTypeError extends TypeError {
   final String _type;
   _JsonTypeError(this._type);
@@ -67,11 +66,15 @@ class _JsonTypeError extends TypeError {
 extension type JsonAny._(JSAny _) {
   static JsonAny? _from(JSAny? value) => value as JsonAny?;
 
-  JsonString? get tryAsString => _ is JSString ? JsonString._(_) : null;
-  JsonNum? get tryAsNum => _ is JSNumber ? JsonNum._(_) : null;
-  JsonBool? get tryAsBool => _ is JSBoolean ? JsonBool._(_) : null;
-  JsonList? get tryAsList => _ is JSArray ? JsonList._(_) : null;
-  JsonMap? get tryAsMap => _ is JSObject && _ is! JSArray ? JsonMap._(_) : null;
+  JsonString? get tryAsString =>
+      _.isA<JSString>() ? JsonString._(_ as JSString) : null;
+  JsonNum? get tryAsNum => _.isA<JSNumber>() ? JsonNum._(_ as JSNumber) : null;
+  JsonBool? get tryAsBool =>
+      _.isA<JSBoolean>() ? JsonBool._(_ as JSBoolean) : null;
+  JsonList? get tryAsList => _.isA<JSArray>() ? JsonList._(_ as JSArray) : null;
+  JsonMap? get tryAsMap => (_.isA<JSObject>() && !_.isA<JSArray>())
+      ? JsonMap._(_ as JSObject)
+      : null;
 
   JsonString get asString => tryAsString ?? (throw _JsonTypeError('String'));
   JsonNum get asNum => tryAsNum ?? (throw _JsonTypeError('num'));
@@ -135,7 +138,10 @@ extension type const JsonBool._(JSBoolean _) {
 
 extension type const JsonNum._(JSNumber _) {
   /// This number as a Dart integer.
-  int get toInt => _.toDartInt;
+  ///
+  /// If the original value was not an integer,
+  /// it's converted to one using [double.toInt].
+  int get toInt => _.toDartDouble.toInt();
 
   /// This number as a Dart [double].
   double get toDouble => _.toDartDouble;
@@ -239,7 +245,6 @@ extension type const JsonMap._(JSObject _) {
   JsonBool boolAt(String key) =>
       this[key]?.tryAsBool ?? (throw _JsonTypeError('bool'));
 
-
   /// Reads a list value for [key].
   ///
   /// The [key] must be a key of this JSON map, and
@@ -247,15 +252,12 @@ extension type const JsonMap._(JSObject _) {
   JsonList listAt(String key) =>
       this[key]?.tryAsList ?? (throw _JsonTypeError('List'));
 
-
   /// Reads a map value for [key].
   ///
   /// The [key] must be a key of this JSON map, and
   /// the value for [key] must be a JSON map.
   JsonMap mapAt(String key) =>
       this[key]?.tryAsMap ?? (throw _JsonTypeError('Map'));
-
-
 
   /// The keys of this JSON map, in no guaranteed order.
   List<String> get keys {
